@@ -1,0 +1,61 @@
+<html>
+  <head>
+    <script src="http://requirejs.org/docs/release/2.1.15/minified/require.js"></script>
+  </head>
+  <body>
+    <input type="file" id="upload">
+    <button onclick="slice()" id="slice" disabled>Slice</button>
+    <br/>
+    <div id="container"></div>
+    <br/>
+    <p id="status"></p>
+    <br/>
+    <h5>GCODE</h5>
+    <textarea id="gcode" rows="24" cols="80" style="resize:none" readonly></textarea>
+    <script>
+      document.getElementById('upload').addEventListener('change', handle_file, false);
+      var stl_contents = "";
+
+      function handle_file(event) {
+        var file = event.target.files[0];
+        var reader = new FileReader();
+        reader.onload = function(e) {
+          stl_contents = e.target.result;
+          document.getElementById("slice").disabled = false;
+        };
+        reader.readAsBinaryString(file);
+      }
+
+      function slice() {
+        var s = document.getElementById("status");
+        require(['CuraEngineInternal'], function(engine) {
+          engine.write_file("test.stl", "utf8", stl_contents, function(err) {
+            if (err) {
+              s.innerHTML = "Error on write! " + err;
+              return
+            }
+          });
+          s.innerHTML = "Slicing...";
+          var start = Date.now();
+          engine.main(["-o", "test.gcode", "test.stl"], function(err) {
+            var millis = Date.now() - start;
+            if (err) {
+              s.innerHTML = "Error on slice! " + err;
+              return
+            }
+            s.innerHTML = "Slice finished in " + millis/1000 + " seconds";
+          });
+          engine.read_file("test.gcode", "utf8", function(err, contents) {
+            if (err) {
+              s.innerHTML = "Error on read! " + err;
+              return
+            }
+            var gcode = document.getElementById("gcode");
+            gcode.value = contents;
+          });
+        });
+      }
+
+    </script>
+  </body>
+</html>
